@@ -17,7 +17,13 @@ struct Cli {
     verbose: u8,
 
     /// Server address to connect to.
-    #[arg(long, short, default_value = "http://127.0.0.1:50051", global = true, env = "NAVIGATOR_SERVER")]
+    #[arg(
+        long,
+        short,
+        default_value = "http://127.0.0.1:50051",
+        global = true,
+        env = "NAVIGATOR_SERVER"
+    )]
     server: String,
 
     #[command(subcommand)]

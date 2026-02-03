@@ -123,6 +123,6 @@ pub enum LandlockCompatibility {
     HardRequirement,
 }
 
-fn default_policy_version() -> u32 {
+const fn default_policy_version() -> u32 {
     1
 }

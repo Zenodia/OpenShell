@@ -2,7 +2,7 @@
 
 use crate::policy::{LandlockCompatibility, SandboxPolicy};
 use landlock::{
-    Access, AccessFs, ABI, CompatLevel, Compatible, PathBeneath, PathFd, Ruleset, RulesetAttr,
+    ABI, Access, AccessFs, CompatLevel, Compatible, PathBeneath, PathFd, Ruleset, RulesetAttr,
     RulesetCreatedAttr,
 };
 use miette::{IntoDiagnostic, Result};
@@ -42,14 +42,20 @@ pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
         for path in read_only {
             debug!(path = %path.display(), "Landlock allow read-only");
             ruleset = ruleset
-                .add_rule(PathBeneath::new(PathFd::new(path).into_diagnostic()?, access_read))
+                .add_rule(PathBeneath::new(
+                    PathFd::new(path).into_diagnostic()?,
+                    access_read,
+                ))
                 .into_diagnostic()?;
         }
 
         for path in read_write {
             debug!(path = %path.display(), "Landlock allow read-write");
             ruleset = ruleset
-                .add_rule(PathBeneath::new(PathFd::new(path).into_diagnostic()?, access_all))
+                .add_rule(PathBeneath::new(
+                    PathFd::new(path).into_diagnostic()?,
+                    access_all,
+                ))
                 .into_diagnostic()?;
         }
 
@@ -58,7 +64,10 @@ pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
     })();
 
     if let Err(err) = result {
-        if matches!(policy.landlock.compatibility, LandlockCompatibility::BestEffort) {
+        if matches!(
+            policy.landlock.compatibility,
+            LandlockCompatibility::BestEffort
+        ) {
             warn!(error = %err, "Landlock unavailable, continuing without filesystem sandbox");
             return Ok(());
         }

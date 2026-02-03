@@ -88,6 +88,16 @@ mise run cli -- --help   # Run CLI with arguments
 mise run sandbox         # Run sandbox
 ```
 
+### Git Hooks (Pre-commit)
+
+We use `mise generate git-pre-commit` for local pre-commit checks.
+
+Generate a Git pre-commit hook that runs the `pre-commit` task:
+
+```bash
+mise generate git-pre-commit --write --task=pre-commit
+```
+
 ### Kubernetes Development
 
 The project uses [k3d](https://k3d.io/) for local Kubernetes development. All required tools (k3d, kubectl, skaffold, helm) are managed by mise.
@@ -127,6 +137,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 ```
 
 **Types:**
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation only
@@ -137,6 +148,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 - `perf` - Performance improvements
 
 **Examples:**
+
 ```
 feat(cli): add --verbose flag to nav run
 fix(sandbox): handle timeout errors gracefully

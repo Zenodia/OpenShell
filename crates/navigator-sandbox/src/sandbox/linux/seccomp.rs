@@ -3,8 +3,8 @@
 use crate::policy::{NetworkMode, SandboxPolicy};
 use miette::{IntoDiagnostic, Result};
 use seccompiler::{
-    apply_filter, SeccompAction, SeccompCmpArgLen, SeccompCmpOp, SeccompCondition, SeccompFilter,
-    SeccompRule,
+    SeccompAction, SeccompCmpArgLen, SeccompCmpOp, SeccompCondition, SeccompFilter, SeccompRule,
+    apply_filter,
 };
 use std::collections::BTreeMap;
 use std::convert::TryInto;
@@ -66,13 +66,9 @@ fn build_filter(allow_inet: bool) -> Result<seccompiler::BpfProgram> {
 }
 
 fn add_socket_domain_rule(rules: &mut BTreeMap<i64, Vec<SeccompRule>>, domain: i32) -> Result<()> {
-    let condition = SeccompCondition::new(
-        0,
-        SeccompCmpArgLen::Dword,
-        SeccompCmpOp::Eq,
-        domain as u64,
-    )
-    .into_diagnostic()?;
+    let condition =
+        SeccompCondition::new(0, SeccompCmpArgLen::Dword, SeccompCmpOp::Eq, domain as u64)
+            .into_diagnostic()?;
 
     let rule = SeccompRule::new(vec![condition]).into_diagnostic()?;
     rules.entry(libc::SYS_socket).or_default().push(rule);

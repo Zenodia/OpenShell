@@ -4,7 +4,7 @@ use clap::Parser;
 use miette::{IntoDiagnostic, Result};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::{Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 use navigator_sandbox::run_sandbox;
 

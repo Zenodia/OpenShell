@@ -1,7 +1,7 @@
 //! gRPC service implementation.
 
 use navigator_core::proto::{
-    navigator_server::Navigator, HealthRequest, HealthResponse, ServiceStatus,
+    HealthRequest, HealthResponse, ServiceStatus, navigator_server::Navigator,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -17,6 +17,7 @@ pub struct NavigatorService {
 impl NavigatorService {
     /// Create a new Navigator service.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn new(state: Arc<ServerState>) -> Self {
         Self { state }
     }

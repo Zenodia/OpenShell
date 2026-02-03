@@ -13,6 +13,7 @@ mod linux;
 /// # Errors
 ///
 /// Returns an error if the sandbox cannot be applied.
+#[cfg_attr(not(target_os = "linux"), allow(clippy::unnecessary_wraps))]
 pub fn apply(policy: &SandboxPolicy, workdir: Option<&str>) -> Result<()> {
     #[cfg(target_os = "linux")]
     {

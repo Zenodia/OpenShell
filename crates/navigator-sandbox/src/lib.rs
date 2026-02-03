@@ -12,8 +12,8 @@ use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{error, info};
 
-use crate::policy::SandboxPolicy;
 use crate::policy::NetworkMode;
+use crate::policy::SandboxPolicy;
 use crate::proxy::ProxyHandle;
 pub use process::{ProcessHandle, ProcessStatus};
 
@@ -31,9 +31,9 @@ pub async fn run_sandbox(
     _health_check: bool,
     _health_port: u16,
 ) -> Result<i32> {
-    let (program, args) = command.split_first().ok_or_else(|| {
-        miette::miette!("No command specified")
-    })?;
+    let (program, args) = command
+        .split_first()
+        .ok_or_else(|| miette::miette!("No command specified"))?;
 
     let policy_path = policy_path.or_else(|| std::env::var("NAVIGATOR_SANDBOX_POLICY").ok());
     let policy_path = policy_path.ok_or_else(|| {
@@ -57,13 +57,12 @@ pub async fn run_sandbox(
 
     // Wait for process with optional timeout
     let result = if timeout_secs > 0 {
-        match timeout(Duration::from_secs(timeout_secs), handle.wait()).await {
-            Ok(result) => result,
-            Err(_) => {
-                error!("Process timed out, killing");
-                handle.kill()?;
-                return Ok(124); // Standard timeout exit code
-            }
+        if let Ok(result) = timeout(Duration::from_secs(timeout_secs), handle.wait()).await {
+            result
+        } else {
+            error!("Process timed out, killing");
+            handle.kill()?;
+            return Ok(124); // Standard timeout exit code
         }
     } else {
         handle.wait().await

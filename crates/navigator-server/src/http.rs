@@ -1,12 +1,6 @@
 //! HTTP health endpoints using Axum.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -47,7 +41,6 @@ async fn readyz(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
 }
 
 /// Create the health router.
-#[must_use]
 pub fn health_router(state: Arc<ServerState>) -> Router {
     Router::new()
         .route("/health", get(health))

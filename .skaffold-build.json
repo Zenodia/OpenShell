@@ -1,1 +1,1 @@
-{"builds":[{"imageName":"navigator-registry:5000/navigator-server","tag":"navigator-registry:5000/navigator-server:5f7d9a5f644954f873f27b79a79f615554dd3e670499be2f46d88214ad87b5f9"},{"imageName":"navigator-registry:5000/sandbox-test-container","tag":"navigator-registry:5000/sandbox-test-container:d94753226607ec9f957b678ca2635394b6e1c7ef9426d46f3c55bbbe8f10c4cb"}]}
+{"builds":null}

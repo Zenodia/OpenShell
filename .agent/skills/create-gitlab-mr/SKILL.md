@@ -25,6 +25,14 @@ SSL_CERT_FILE=/etc/ssl/cert.pem glab ...
 
 ## Before Creating an MR
 
+### Run Pre-commit Checks
+
+Run the local pre-commit task before opening an MR:
+
+```bash
+mise run pre-commit
+```
+
 ### Verify Branch State
 
 Before creating an MR, verify:

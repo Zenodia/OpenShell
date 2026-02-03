@@ -51,7 +51,7 @@ fn default_log_level() -> String {
 impl Config {
     /// Create a new configuration with the given bind address.
     #[must_use]
-    pub fn with_bind_address(mut self, addr: SocketAddr) -> Self {
+    pub const fn with_bind_address(mut self, addr: SocketAddr) -> Self {
         self.bind_address = addr;
         self
     }

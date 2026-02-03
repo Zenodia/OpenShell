@@ -2,11 +2,12 @@
 
 use indicatif::{ProgressBar, ProgressStyle};
 use miette::{IntoDiagnostic, Result};
-use navigator_core::proto::{navigator_client::NavigatorClient, HealthRequest};
+use navigator_core::proto::{HealthRequest, navigator_client::NavigatorClient};
 use owo_colors::OwoColorize;
 use std::time::Duration;
 
 /// Check server health.
+#[allow(clippy::significant_drop_tightening)]
 pub async fn health(server: &str) -> Result<()> {
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
@@ -32,7 +33,7 @@ pub async fn health(server: &str) -> Result<()> {
         _ => ("●".red().to_string(), "unhealthy"),
     };
 
-    println!("{} Server is {}", status_icon, status_text);
+    println!("{status_icon} Server is {status_text}");
     println!("  {} {}", "Version:".dimmed(), health.version);
     println!("  {} {}s", "Uptime:".dimmed(), health.uptime_seconds);
 
@@ -47,20 +48,18 @@ pub async fn status(server: &str) -> Result<()> {
 
     // Try to connect and get health
     match NavigatorClient::connect(server.to_string()).await {
-        Ok(mut client) => {
-            match client.health(HealthRequest {}).await {
-                Ok(response) => {
-                    let health = response.into_inner();
-                    println!("  {} {}", "Status:".dimmed(), "Connected".green());
-                    println!("  {} {}", "Version:".dimmed(), health.version);
-                    println!("  {} {}s", "Uptime:".dimmed(), health.uptime_seconds);
-                }
-                Err(e) => {
-                    println!("  {} {}", "Status:".dimmed(), "Error".red());
-                    println!("  {} {}", "Error:".dimmed(), e);
-                }
+        Ok(mut client) => match client.health(HealthRequest {}).await {
+            Ok(response) => {
+                let health = response.into_inner();
+                println!("  {} {}", "Status:".dimmed(), "Connected".green());
+                println!("  {} {}", "Version:".dimmed(), health.version);
+                println!("  {} {}s", "Uptime:".dimmed(), health.uptime_seconds);
             }
-        }
+            Err(e) => {
+                println!("  {} {}", "Status:".dimmed(), "Error".red());
+                println!("  {} {}", "Error:".dimmed(), e);
+            }
+        },
         Err(e) => {
             println!("  {} {}", "Status:".dimmed(), "Disconnected".red());
             println!("  {} {}", "Error:".dimmed(), e);

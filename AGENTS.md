@@ -13,6 +13,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to perform common
 - Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`
 - Never mention Claude or any AI agent in commits (no author attribution, no Co-Authored-By, no references in commit messages)
 
+## Pre-commit
+
+- Run `mise run pre-commit` before committing.
+- Install the git hook when working locally: `mise generate git-pre-commit --write --task=pre-commit`
+
 ## Python
 
 - Always use `uv` for Python commands (e.g., `uv pip install`, `uv run`, `uv venv`)

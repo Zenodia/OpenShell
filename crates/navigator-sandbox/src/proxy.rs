@@ -15,6 +15,7 @@ const MAX_HEADER_BYTES: usize = 8192;
 #[derive(Debug)]
 pub struct ProxyHandle {
     socket_path: Option<String>,
+    #[allow(dead_code)]
     http_addr: Option<SocketAddr>,
     join: JoinHandle<()>,
 }
@@ -105,7 +106,8 @@ impl ProxyHandle {
         })
     }
 
-    pub fn http_addr(&self) -> Option<SocketAddr> {
+    #[allow(dead_code)]
+    pub const fn http_addr(&self) -> Option<SocketAddr> {
         self.http_addr
     }
 }
@@ -129,18 +131,27 @@ fn ensure_socket_dir(socket_path: &str) -> Result<()> {
 
 async fn cleanup_socket(socket_path: &str) -> Result<()> {
     if tokio::fs::try_exists(socket_path).await.into_diagnostic()? {
-        tokio::fs::remove_file(socket_path).await.into_diagnostic()?;
+        tokio::fs::remove_file(socket_path)
+            .await
+            .into_diagnostic()?;
     }
     Ok(())
 }
 
-async fn handle_unix_connection(mut client: UnixStream, allow_hosts: Arc<Vec<String>>) -> Result<()> {
+async fn handle_unix_connection(
+    mut client: UnixStream,
+    allow_hosts: Arc<Vec<String>>,
+) -> Result<()> {
     let mut buf = vec![0u8; MAX_HEADER_BYTES];
     let mut used = 0usize;
 
     loop {
         if used == buf.len() {
-            respond_unix(&mut client, b"HTTP/1.1 431 Request Header Fields Too Large\r\n\r\n").await?;
+            respond_unix(
+                &mut client,
+                b"HTTP/1.1 431 Request Header Fields Too Large\r\n\r\n",
+            )
+            .await?;
             return Ok(());
         }
 
@@ -197,7 +208,11 @@ async fn handle_tcp_connection(mut client: TcpStream, allow_hosts: Arc<Vec<Strin
 
     loop {
         if used == buf.len() {
-            respond_tcp(&mut client, b"HTTP/1.1 431 Request Header Fields Too Large\r\n\r\n").await?;
+            respond_tcp(
+                &mut client,
+                b"HTTP/1.1 431 Request Header Fields Too Large\r\n\r\n",
+            )
+            .await?;
             return Ok(());
         }
 
@@ -249,9 +264,9 @@ async fn handle_tcp_connection(mut client: TcpStream, allow_hosts: Arc<Vec<Strin
 }
 
 fn parse_target(target: &str) -> Result<(String, u16)> {
-    let (host, port_str) = target.split_once(':').ok_or_else(|| {
-        miette::miette!("CONNECT target missing port: {target}")
-    })?;
+    let (host, port_str) = target
+        .split_once(':')
+        .ok_or_else(|| miette::miette!("CONNECT target missing port: {target}"))?;
     let port: u16 = port_str
         .parse()
         .map_err(|_| miette::miette!("Invalid port in CONNECT target: {target}"))?;
@@ -296,17 +311,26 @@ async fn respond_tcp(client: &mut TcpStream, bytes: &[u8]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_allowed, ProxyHandle};
+    #[cfg(target_os = "linux")]
+    use super::ProxyHandle;
+    use super::is_allowed;
+    #[cfg(target_os = "linux")]
     use crate::policy::ProxyPolicy;
+    #[cfg(target_os = "linux")]
     use std::net::SocketAddr;
+    #[cfg(target_os = "linux")]
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    #[cfg(target_os = "linux")]
     use tokio::net::{TcpListener, TcpStream};
-    use tokio::time::{sleep, Duration};
+    #[cfg(target_os = "linux")]
+    use tokio::time::{Duration, sleep};
 
+    #[cfg(target_os = "linux")]
     fn temp_socket_addr() -> SocketAddr {
         SocketAddr::from(([127, 0, 0, 1], 0))
     }
 
+    #[cfg(target_os = "linux")]
     async fn connect_with_retry(addr: SocketAddr) -> TcpStream {
         let mut attempts = 0;
         loop {
@@ -338,6 +362,7 @@ mod tests {
         assert!(!is_allowed("google.com", &allow_hosts));
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn proxy_denies_disallowed_host() {
         let policy = ProxyPolicy {
@@ -361,6 +386,7 @@ mod tests {
         assert!(text.contains("403"));
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn proxy_allows_allowed_host() {
         let policy = ProxyPolicy {
@@ -380,9 +406,7 @@ mod tests {
         let addr = proxy.http_addr().expect("missing http addr");
         let mut stream = connect_with_retry(addr).await;
 
-        let request = format!(
-            "CONNECT localhost:{port} HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        );
+        let request = format!("CONNECT localhost:{port} HTTP/1.1\r\nHost: localhost\r\n\r\n");
         stream.write_all(request.as_bytes()).await.unwrap();
 
         let mut response = [0u8; 128];

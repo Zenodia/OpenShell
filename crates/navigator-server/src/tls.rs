@@ -1,8 +1,8 @@
 //! TLS support using tokio-rustls.
 
 use navigator_core::{Error, Result};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::ServerConfig;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -36,6 +36,7 @@ impl TlsAcceptor {
 
     /// Get the inner tokio-rustls acceptor.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn inner(&self) -> &tokio_rustls::TlsAcceptor {
         &self.acceptor
     }
@@ -43,7 +44,8 @@ impl TlsAcceptor {
 
 /// Load certificates from a PEM file.
 fn load_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>> {
-    let file = File::open(path).map_err(|e| Error::tls(format!("failed to open cert file: {e}")))?;
+    let file =
+        File::open(path).map_err(|e| Error::tls(format!("failed to open cert file: {e}")))?;
     let mut reader = BufReader::new(file);
 
     let certs: Vec<_> = rustls_pemfile::certs(&mut reader)
@@ -63,14 +65,15 @@ fn load_key(path: &Path) -> Result<PrivateKeyDer<'static>> {
     let mut reader = BufReader::new(file);
 
     loop {
-        match rustls_pemfile::read_one(&mut reader)
-            .map_err(|e| Error::tls(format!("failed to parse key file: {e}")))?
-        {
+        let item = rustls_pemfile::read_one(&mut reader)
+            .map_err(|e| Error::tls(format!("failed to parse key file: {e}")))?;
+
+        match item {
             Some(rustls_pemfile::Item::Pkcs1Key(key)) => return Ok(key.into()),
             Some(rustls_pemfile::Item::Pkcs8Key(key)) => return Ok(key.into()),
             Some(rustls_pemfile::Item::Sec1Key(key)) => return Ok(key.into()),
             None => break,
-            _ => continue,
+            _ => {}
         }
     }
 

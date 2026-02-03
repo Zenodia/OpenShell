@@ -22,6 +22,7 @@ helm = "latest"
 [env]
 KUBECONFIG = "{{config_root}}/kubeconfig"
 _.path = ["{{config_root}}/scripts/bin"]
+UV_CACHE_DIR = "{{config_root}}/.cache/uv"
 
 # ============================================================================
 # Build Tasks
@@ -65,6 +66,7 @@ run = "cargo test --workspace"
 
 [tasks."test:python"]
 description = "Run Python tests"
+env = { UV_NO_SYNC = "1" }
 run = "uv run pytest python/"
 
 [tasks."test:e2e:sandbox"]
@@ -96,6 +98,7 @@ run = "uv run maturin build --release"
 
 [tasks."python:lint"]
 description = "Lint Python code with ruff"
+env = { UV_NO_SYNC = "1" }
 run = "uv run ruff check python/"
 
 [tasks."python:fmt"]
@@ -169,3 +172,11 @@ run = "cargo clean"
 [tasks.all]
 description = "Build, lint, and test everything"
 depends = ["fmt:check", "clippy", "test", "python:lint"]
+
+# ============================================================================
+# Git Hooks
+# ============================================================================
+
+[tasks."pre-commit"]
+description = "Pre-commit checks (format, lint, and tests)"
+depends = ["fmt:check", "clippy", "python:lint", "test:rust", "test:python"]

@@ -4,9 +4,9 @@ use crate::policy::{NetworkMode, SandboxPolicy};
 use crate::sandbox;
 use miette::{IntoDiagnostic, Result};
 use nix::sys::signal::{self, Signal};
-use nix::unistd::{Group, User, Pid};
-use std::process::Stdio;
+use nix::unistd::{Group, Pid, User};
 use std::ffi::CString;
+use std::process::Stdio;
 use tokio::process::{Child, Command};
 use tracing::{debug, warn};
 
@@ -43,7 +43,9 @@ impl ProcessHandle {
 
         if matches!(policy.network.mode, NetworkMode::Proxy) {
             let proxy = policy.network.proxy.as_ref().ok_or_else(|| {
-                miette::miette!("Network mode is set to proxy but no proxy configuration was provided")
+                miette::miette!(
+                    "Network mode is set to proxy but no proxy configuration was provided"
+                )
             })?;
             if let Some(unix_socket) = &proxy.unix_socket {
                 cmd.env("NAVIGATOR_PROXY_SOCKET", unix_socket);
@@ -73,13 +75,11 @@ impl ProcessHandle {
                         libc::setpgid(0, 0);
                     }
 
-                    sandbox::apply(&policy, workdir.as_deref()).map_err(|err| {
-                        std::io::Error::new(std::io::ErrorKind::Other, err.to_string())
-                    })?;
+                    sandbox::apply(&policy, workdir.as_deref())
+                        .map_err(|err| std::io::Error::other(err.to_string()))?;
 
-                    drop_privileges(&policy).map_err(|err| {
-                        std::io::Error::new(std::io::ErrorKind::Other, err.to_string())
-                    })?;
+                    drop_privileges(&policy)
+                        .map_err(|err| std::io::Error::other(err.to_string()))?;
 
                     Ok(())
                 });
@@ -96,7 +96,7 @@ impl ProcessHandle {
 
     /// Get the process ID.
     #[must_use]
-    pub fn pid(&self) -> u32 {
+    pub const fn pid(&self) -> u32 {
         self.pid
     }
 
@@ -116,7 +116,8 @@ impl ProcessHandle {
     ///
     /// Returns an error if the signal cannot be sent.
     pub fn signal(&self, sig: Signal) -> Result<()> {
-        signal::kill(Pid::from_raw(self.pid as i32), sig).into_diagnostic()
+        let pid = i32::try_from(self.pid).unwrap_or(i32::MAX);
+        signal::kill(Pid::from_raw(pid), sig).into_diagnostic()
     }
 
     /// Kill the process.
@@ -136,7 +137,8 @@ impl ProcessHandle {
         // Force kill if still running
         if let Some(id) = self.child.id() {
             debug!(pid = id, "Sending SIGKILL");
-            let _ = signal::kill(Pid::from_raw(id as i32), Signal::SIGKILL);
+            let pid = i32::try_from(id).unwrap_or(i32::MAX);
+            let _ = signal::kill(Pid::from_raw(pid), Signal::SIGKILL);
         }
 
         Ok(())
@@ -159,9 +161,9 @@ fn drop_privileges(policy: &SandboxPolicy) -> Result<()> {
     }
 
     let user = if let Some(name) = user_name {
-        User::from_name(name).into_diagnostic()?.ok_or_else(|| {
-            miette::miette!("Sandbox user not found: {name}")
-        })?
+        User::from_name(name)
+            .into_diagnostic()?
+            .ok_or_else(|| miette::miette!("Sandbox user not found: {name}"))?
     } else {
         User::from_uid(nix::unistd::geteuid())
             .into_diagnostic()?
@@ -169,9 +171,9 @@ fn drop_privileges(policy: &SandboxPolicy) -> Result<()> {
     };
 
     let group = if let Some(name) = group_name {
-        Group::from_name(name).into_diagnostic()?.ok_or_else(|| {
-            miette::miette!("Sandbox group not found: {name}")
-        })?
+        Group::from_name(name)
+            .into_diagnostic()?
+            .ok_or_else(|| miette::miette!("Sandbox group not found: {name}"))?
     } else {
         Group::from_gid(user.gid)
             .into_diagnostic()?
@@ -181,7 +183,24 @@ fn drop_privileges(policy: &SandboxPolicy) -> Result<()> {
     if user_name.is_some() {
         let user_cstr =
             CString::new(user.name.clone()).map_err(|_| miette::miette!("Invalid user name"))?;
-        nix::unistd::initgroups(user_cstr.as_c_str(), group.gid).into_diagnostic()?;
+        #[cfg(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "haiku",
+            target_os = "redox"
+        ))]
+        {
+            let _ = user_cstr;
+        }
+        #[cfg(not(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "haiku",
+            target_os = "redox"
+        )))]
+        {
+            nix::unistd::initgroups(user_cstr.as_c_str(), group.gid).into_diagnostic()?;
+        }
     }
 
     nix::unistd::setgid(group.gid).into_diagnostic()?;
@@ -217,7 +236,7 @@ impl ProcessStatus {
 
     /// Get the signal that killed the process, if any.
     #[must_use]
-    pub fn signal(&self) -> Option<i32> {
+    pub const fn signal(&self) -> Option<i32> {
         self.signal
     }
 }

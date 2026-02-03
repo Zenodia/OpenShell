@@ -20,7 +20,7 @@ use std::task::{Context, Poll};
 use tokio::net::TcpStream;
 use tower::ServiceExt;
 
-use crate::{health_router, NavigatorService, ServerState};
+use crate::{NavigatorService, ServerState, health_router};
 
 /// Multiplexed gRPC/HTTP service.
 #[derive(Clone)]
@@ -31,12 +31,16 @@ pub struct MultiplexService {
 impl MultiplexService {
     /// Create a new multiplex service.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn new(state: Arc<ServerState>) -> Self {
         Self { state }
     }
 
     /// Serve a connection, routing to gRPC or HTTP based on content-type.
-    pub async fn serve(&self, stream: TcpStream) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn serve(
+        &self,
+        stream: TcpStream,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let grpc_service = NavigatorServer::new(NavigatorService::new(self.state.clone()));
         let http_service = health_router(self.state.clone());
 
@@ -81,33 +85,44 @@ where
         let is_grpc = req
             .headers()
             .get("content-type")
-            .map(|v| v.as_bytes().starts_with(b"application/grpc"))
-            .unwrap_or(false);
+            .is_some_and(|v| v.as_bytes().starts_with(b"application/grpc"));
 
         if is_grpc {
             let mut grpc = self.grpc.clone();
             Box::pin(async move {
                 let (parts, body) = req.into_parts();
-                let body = body.map_err(|e| e.into()).boxed_unsync();
+                let body = body.map_err(Into::into).boxed_unsync();
                 let req = Request::from_parts(parts, BoxBody(body));
 
-                let res = grpc.ready().await.map_err(Into::into)?.call(req).await.map_err(Into::into)?;
+                let res = grpc
+                    .ready()
+                    .await
+                    .map_err(Into::into)?
+                    .call(req)
+                    .await
+                    .map_err(Into::into)?;
 
                 let (parts, body) = res.into_parts();
-                let body = body.map_err(|e| e.into()).boxed_unsync();
+                let body = body.map_err(Into::into).boxed_unsync();
                 Ok(Response::from_parts(parts, BoxBody(body)))
             })
         } else {
             let mut http = self.http.clone();
             Box::pin(async move {
                 let (parts, body) = req.into_parts();
-                let body = body.map_err(|e| e.into()).boxed_unsync();
+                let body = body.map_err(Into::into).boxed_unsync();
                 let req = Request::from_parts(parts, BoxBody(body));
 
-                let res = http.ready().await.map_err(Into::into)?.call(req).await.map_err(Into::into)?;
+                let res = http
+                    .ready()
+                    .await
+                    .map_err(Into::into)?
+                    .call(req)
+                    .await
+                    .map_err(Into::into)?;
 
                 let (parts, body) = res.into_parts();
-                let body = body.map_err(|e| e.into()).boxed_unsync();
+                let body = body.map_err(Into::into).boxed_unsync();
                 Ok(Response::from_parts(parts, BoxBody(body)))
             })
         }
@@ -115,7 +130,9 @@ where
 }
 
 /// Boxed body type for uniform handling.
-struct BoxBody(http_body_util::combinators::UnsyncBoxBody<Bytes, Box<dyn std::error::Error + Send + Sync>>);
+struct BoxBody(
+    http_body_util::combinators::UnsyncBoxBody<Bytes, Box<dyn std::error::Error + Send + Sync>>,
+);
 
 impl Body for BoxBody {
     type Data = Bytes;
